@@ -1,0 +1,44 @@
+name: Build ShellTabs x64
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-shelltabs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compile ShellTabs
+        run: cmake --build build --config Release --parallel
+
+      - name: Prepare package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package
+          Copy-Item build/bin/Release/ShellTabs.dll package/
+          Copy-Item build/bin/Release/ShellTabsWorker.exe package/
+          Copy-Item install.bat package/
+          if (Test-Path uninstall.bat) {
+            Copy-Item uninstall.bat package/
+          }
+
+      - name: Upload ShellTabs x64
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShellTabs-Windows-x64
+          path: package/
+          if-no-files-found: error
